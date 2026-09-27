@@ -250,12 +250,9 @@ employees=empJson.data;
 
 
 
-if(employees.length>0){
+currentEmployee = null;
 
-currentEmployee =
-normalizeEmployee(
-employees[0]
-);
+show("employeeModal");
 
 }
 
@@ -1461,5 +1458,54 @@ new Date()
 
 );
 
+// Ввод ФИО сотрудника
 
+const employeeSaveBtn =
+document.getElementById("employeeSaveBtn");
+
+
+if(employeeSaveBtn){
+
+employeeSaveBtn.onclick = function(){
+
+let fio =
+document.getElementById("employeeInput")
+.value
+.trim();
+
+
+if(!fio){
+
+alert("Введите ФИО");
+
+return;
+
+}
+
+
+currentEmployee = {
+
+id:"",
+name:fio
+
+};
+
+
+localStorage.setItem(
+"employee",
+JSON.stringify(currentEmployee)
+);
+
+
+document.getElementById(
+"employeeName"
+).textContent = fio;
+
+
+hide("employeeModal");
+
+
+};
+
+}
 }
