@@ -153,7 +153,17 @@ $("shiftBtn");
 
 if(shift){
 
-shift.onclick=startShift;
+shift.addEventListener(
+"click",
+function(){
+
+console.log("Кнопка заступления нажата");
+
+startShift();
+
+}
+
+);
 
 }
 
