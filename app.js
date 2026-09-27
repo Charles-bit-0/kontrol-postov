@@ -628,7 +628,7 @@ async function startScanner(){
 ===========================
   ЗАСТУПЛЕНИЕ НА ПОСТ
 ===========================
-*/
+/*
 
 
 async function startShift(){
