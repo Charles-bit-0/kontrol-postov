@@ -526,6 +526,105 @@ updateShiftButton();
 
 }
 /*
+/*
+===========================
+  QR СКАНЕР
+===========================
+*/
+
+let scanner = null;
+
+
+async function startScanner(){
+
+  const reader = $("reader");
+
+  if(!reader){
+
+    alert("Сканер не найден");
+
+    return;
+
+  }
+
+
+  show("reader");
+
+
+  try{
+
+
+    scanner =
+      new Html5Qrcode("reader");
+
+
+    await scanner.start(
+
+      {
+        facingMode:"environment"
+      },
+
+
+      {
+        fps:10,
+
+        qrbox:{
+          width:250,
+          height:250
+        }
+
+      },
+
+
+      (decodedText)=>{
+
+        let id = null;
+
+
+        const match =
+          decodedText.match(/P-\d{3}/i);
+
+
+        if(match){
+
+          id =
+          match[0].toUpperCase();
+
+        }
+
+
+        if(id){
+
+          scanner.stop()
+          .catch(()=>{});
+
+
+          hide("reader");
+
+
+          openPost(id);
+
+        }
+
+      }
+
+
+    );
+
+
+  }
+  catch(error){
+
+    console.error(error);
+
+
+    alert(
+      "Не удалось открыть камеру"
+    );
+
+  }
+
+}
 ===========================
   ЗАСТУПЛЕНИЕ НА ПОСТ
 ===========================
