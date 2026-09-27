@@ -1,4 +1,5 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxutkC2ZMlHOlhzelf7BzjPizHduFwUy8jCCrdAWCuQLvxdB4yVxNRVhf0T9ZIU9vYujA/exec";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbxutkC2ZMlHOlhzelf7BzjPizHduFwUy8jCCrdAWCuQLvxdB4yVxNRVhf0T9ZIU9vYujA/exec";
 
 let scanner = null;
 let posts = [];
@@ -11,992 +12,768 @@ let shiftStarted = false;
 let lastCheckTime = null;
 let nextCheckTime = null;
 
-const modal = document.getElementById("modal");
-const reader = document.getElementById("reader");
-const scanError = document.getElementById("scanError");
+function $(id) {
+  return document.getElementById(id);
+}
 
-const postName = document.getElementById("postName");
-const postId = document.getElementById("postId");
-const currentTime = document.getElementById("currentTime");
+function setText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
+}
 
+function show(id) {
+  const el = $(id);
+  if (el) el.classList.remove("hidden");
+}
 
-// =====================================================
-// ЗАПУСК
-// =====================================================
+function hide(id) {
+  const el = $(id);
+  if (el) el.classList.add("hidden");
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
-
+  bindButtons();
+  restoreState();
   updateTime();
   setInterval(updateTime, 1000);
 
   await loadData();
-
-  document.getElementById("scanBtn").onclick = startScanner;
-  document.getElementById("demoBtn").onclick = () => openPost("P-001");
-
-  document.getElementById("closeBtn").onclick = closeModal;
-
-  document.getElementById("saveBtn").onclick = saveCheck;
-
-  document.getElementById("incidentBtn").onclick = openIncident;
-
-  document.getElementById("incidentSaveBtn").onclick = saveIncident;
-
-  document.getElementById("incidentCloseBtn").onclick = closeIncident;
-
-  document.getElementById("shiftBtn").onclick = startShift;
-
-  restoreState();
+  updateMainScreen();
 });
 
 
-// =====================================================
-// ЗАГРУЗКА ДАННЫХ ИЗ GOOGLE
-// =====================================================
+/* =========================
+   КНОПКИ
+========================= */
 
-async function loadData() {
+function bindButtons() {
+  const scanBtn = $("scanBtn");
+  if (scanBtn) {
+    scanBtn.addEventListener("click", startScanner);
+  }
 
-  try {
+  const demoBtn = $("demoBtn");
+  if (demoBtn) {
+    demoBtn.addEventListener("click", () => {
+      openPost("P-001");
+    });
+  }
 
-    const postsResponse =
-      await fetch(API_URL + "?action=posts");
+  const closeBtn = $("closeBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closePost);
+  }
 
-    const postsData =
-      await postsResponse.json();
+  const shiftBtn = $("shiftBtn");
+  if (shiftBtn) {
+    shiftBtn.addEventListener("click", startShift);
+  }
 
-    if (postsData.success) {
-      posts = postsData.posts || [];
-    }
+  const saveBtn = $("saveBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveCheck);
+  }
 
+  const incidentBtn = $("incidentBtn");
+  if (incidentBtn) {
+    incidentBtn.addEventListener("click", openIncident);
+  }
 
-    const employeesResponse =
-      await fetch(API_URL + "?action=employees");
+  const incidentSaveBtn = $("incidentSaveBtn");
+  if (incidentSaveBtn) {
+    incidentSaveBtn.addEventListener("click", saveIncident);
+  }
 
-    const employeesData =
-      await employeesResponse.json();
-
-    if (employeesData.success) {
-      employees = employeesData.employees || [];
-    }
-
-
-    if (employees.length > 0) {
-
-      currentEmployee = employees[0];
-
-      document.getElementById("employeeName").textContent =
-        currentEmployee.name;
-
-      document.getElementById("avatar").textContent =
-        getInitials(currentEmployee.name);
-    }
-
-  } catch (error) {
-
-    console.error("Ошибка загрузки данных:", error);
-
-    document.getElementById("apiStatus").textContent =
-      "Нет связи с сервером";
-
-    document.getElementById("apiStatus").className =
-      "offline";
+  const incidentCloseBtn = $("incidentCloseBtn");
+  if (incidentCloseBtn) {
+    incidentCloseBtn.addEventListener("click", closeIncident);
   }
 }
 
 
-// =====================================================
-// НАЧАЛО СМЕНЫ
-// =====================================================
+/* =========================
+   ЗАГРУЗКА ДАННЫХ
+========================= */
+
+async function loadData() {
+  try {
+    setText("apiStatus", "Подключение...");
+
+    const postsResponse = await fetch(API_URL + "?action=posts");
+    const postsData = await postsResponse.json();
+
+    if (postsData.ok && Array.isArray(postsData.data)) {
+      posts = postsData.data;
+    } else if (Array.isArray(postsData)) {
+      posts = postsData;
+    }
+
+    const employeesResponse =
+      await fetch(API_URL + "?action=employees");
+
+    const employeesData = await employeesResponse.json();
+
+    if (employeesData.ok && Array.isArray(employeesData.data)) {
+      employees = employeesData.data;
+    } else if (Array.isArray(employeesData)) {
+      employees = employeesData;
+    }
+
+    setText("apiStatus", "Подключено");
+
+    if (!currentEmployee && employees.length > 0) {
+      currentEmployee = employees[0];
+    }
+
+    updateEmployee();
+  } catch (error) {
+    console.error("Ошибка загрузки:", error);
+    setText("apiStatus", "Ошибка подключения");
+  }
+}
+
+
+/* =========================
+   СОТРУДНИК
+========================= */
+
+function updateEmployee() {
+  if (!currentEmployee) return;
+
+  const name =
+    currentEmployee.name ||
+    currentEmployee.employeeName ||
+    currentEmployee["ФИО"] ||
+    "Сотрудник";
+
+  setText("employeeName", name);
+
+  const avatar = $("avatar");
+
+  if (avatar) {
+    const firstLetter = name.trim().charAt(0).toUpperCase();
+    avatar.textContent = firstLetter || "О";
+  }
+}
+
+
+/* =========================
+   СКАНЕР QR
+========================= */
+
+async function startScanner() {
+  const reader = $("reader");
+
+  if (!reader) {
+    alert("Элемент сканера не найден.");
+    return;
+  }
+
+  show("reader");
+
+  try {
+    if (scanner) {
+      try {
+        await scanner.stop();
+      } catch (e) {}
+    }
+
+    scanner = new Html5Qrcode("reader");
+
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        }
+      },
+      (decodedText) => {
+        handleQrCode(decodedText);
+      },
+      () => {}
+    );
+  } catch (error) {
+    console.error("Ошибка камеры:", error);
+
+    const scanError = $("scanError");
+
+    if (scanError) {
+      scanError.textContent =
+        "Не удалось открыть камеру. Разрешите доступ к камере.";
+    } else {
+      alert(
+        "Не удалось открыть камеру. Разрешите доступ к камере."
+      );
+    }
+  }
+}
+
+
+async function handleQrCode(text) {
+  let postId = null;
+
+  const match = String(text).match(/P-\d{3}/i);
+
+  if (match) {
+    postId = match[0].toUpperCase();
+  }
+
+  if (!postId) {
+    try {
+      const url = new URL(text);
+
+      postId =
+        url.searchParams.get("post") ||
+        url.searchParams.get("postId");
+    } catch (e) {}
+  }
+
+  if (!postId) {
+    alert("QR-код не содержит номера поста.");
+    return;
+  }
+
+  if (scanner) {
+    try {
+      await scanner.stop();
+    } catch (e) {}
+  }
+
+  hide("reader");
+
+  openPost(postId);
+}
+
+
+/* =========================
+   ПОСТ
+========================= */
+
+function findPost(id) {
+  return posts.find(
+    p =>
+      String(p.id || p.postId || p["ID"]) === String(id)
+  );
+}
+
+
+function openPost(id) {
+  currentPost = findPost(id);
+
+  if (!currentPost) {
+    currentPost = {
+      id: id,
+      name: "Пост №" + parseInt(String(id).replace(/\D/g, ""), 10)
+    };
+  }
+
+  const postName =
+    currentPost.name ||
+    currentPost.postName ||
+    currentPost["Название"] ||
+    "Пост";
+
+  setText("postName", postName);
+  setText("postId", currentPost.id || id);
+
+  const currentTime = new Date();
+
+  setText(
+    "currentTime",
+    currentTime.toLocaleString("ru-RU")
+  );
+
+  const modal = $("modal");
+
+  if (modal) {
+    modal.classList.remove("hidden");
+  }
+
+  updateShiftButton();
+}
+
+
+function closePost() {
+  hide("modal");
+}
+
+
+/* =========================
+   НАЧАЛО СМЕНЫ
+========================= */
 
 async function startShift() {
-
   if (!currentPost) {
     alert("Сначала выберите пост.");
     return;
   }
 
   if (!currentEmployee) {
-    alert("Сотрудник не определён.");
+    alert("Сотрудник не выбран.");
     return;
   }
 
+  const postId =
+    currentPost.id ||
+    currentPost.postId;
 
-  const button =
-    document.getElementById("shiftBtn");
-
-  button.disabled = true;
-  button.textContent = "Регистрация...";
-
+  const employeeId =
+    currentEmployee.id ||
+    currentEmployee.employeeId ||
+    currentEmployee["ID"];
 
   try {
+    const result = await sendPost({
+      action: "start_shift",
 
-    const response =
-      await fetch(API_URL, {
+      employee:
+        currentEmployee.name ||
+        currentEmployee.employeeName ||
+        currentEmployee["ФИО"],
 
-        method: "POST",
+      employeeId: employeeId,
 
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8"
-        },
+      post:
+        currentPost.name ||
+        currentPost.postName ||
+        currentPost["Название"],
 
-        body: JSON.stringify({
+      postId: postId
+    });
 
-          action: "start_shift",
-
-          employee:
-            currentEmployee.name,
-
-          employeeId:
-            currentEmployee.id,
-
-          post:
-            currentPost.name,
-
-          postId:
-            currentPost.id
-
-        })
-
-      });
-
-
-    const data =
-      await response.json();
-
-
-    if (!data.success) {
-      throw new Error(data.message || "Ошибка сервера");
+    if (!result.ok) {
+      throw new Error(
+        result.error || "Не удалось начать смену"
+      );
     }
 
-
     shiftStarted = true;
-
-    lastCheckTime =
-      new Date();
-
-
-    nextCheckTime =
-      new Date(
-        lastCheckTime.getTime() +
-        2 * 60 * 60 * 1000
-      );
-
+    lastCheckTime = new Date();
+    nextCheckTime = new Date(
+      Date.now() + 2 * 60 * 60 * 1000
+    );
 
     saveState();
 
-
+    updateShiftButton();
     updateMainScreen();
 
-    closeModal();
-
-
     alert(
-      "✓ Вы заступили на пост\n\n" +
-      currentPost.name +
-      "\n\n" +
-      "Следующая отметка через 2 часа."
+      "Смена начата.\n\nСледующая проверка через 2 часа."
     );
-
-
   } catch (error) {
+    console.error(error);
 
     alert(
-      "Не удалось зарегистрировать заступление:\n" +
+      "Не удалось начать смену.\n\n" +
       error.message
     );
+  }
+}
 
-  } finally {
 
-    button.disabled = false;
+function updateShiftButton() {
+  const button = $("shiftBtn");
+
+  if (!button) return;
+
+  if (shiftStarted) {
+    button.textContent = "Смена уже начата";
+    button.disabled = true;
+  } else {
     button.textContent = "Заступить на пост";
-
+    button.disabled = false;
   }
 }
 
 
-// =====================================================
-// QR СКАНЕР
-// =====================================================
-
-async function startScanner() {
-
-  scanError.textContent = "";
-
-  reader.classList.remove("hidden");
-
-
-  if (!window.Html5Qrcode) {
-
-    scanError.textContent =
-      "Модуль сканирования не загрузился.";
-
-    return;
-  }
-
-
-  scanner =
-    new Html5Qrcode("reader");
-
-
-  try {
-
-    await scanner.start(
-
-      {
-        facingMode: "environment"
-      },
-
-      {
-        fps: 10,
-        qrbox: {
-          width: 240,
-          height: 240
-        }
-      },
-
-      async decodedText => {
-
-        const id =
-          parsePostId(decodedText);
-
-
-        if (!id) {
-
-          scanError.textContent =
-            "Неизвестный QR-код.";
-
-          return;
-        }
-
-
-        const post =
-          posts.find(p =>
-            p.id === id
-          );
-
-
-        if (!post) {
-
-          scanError.textContent =
-            "Такого поста нет в системе.";
-
-          return;
-        }
-
-
-        await stopScanner();
-
-        openPost(id);
-
-      },
-
-      () => {}
-
-    );
-
-  } catch (error) {
-
-    scanError.textContent =
-      "Не удалось открыть камеру. Разрешите доступ к камере.";
-
-  }
-}
-
-
-function parsePostId(text) {
-
-  const value =
-    String(text).trim();
-
-
-  const match =
-    value.match(
-      /[?&]post=([^&#]+)/i
-    );
-
-
-  if (match) {
-
-    return decodeURIComponent(
-      match[1]
-    ).toUpperCase();
-
-  }
-
-
-  if (
-    /^P-\d{3}$/i.test(value)
-  ) {
-
-    return value.toUpperCase();
-
-  }
-
-
-  return null;
-}
-
-
-async function stopScanner() {
-
-  if (scanner) {
-
-    await scanner.stop()
-      .catch(() => {});
-
-    scanner = null;
-  }
-
-  reader.classList.add("hidden");
-}
-
-
-// =====================================================
-// ОТКРЫТИЕ ПОСТА
-// =====================================================
-
-function openPost(id) {
-
-  const post =
-    posts.find(p =>
-      p.id === id
-    );
-
-
-  if (!post) {
-
-    alert("Пост не найден.");
-
-    return;
-  }
-
-
-  currentPost = post;
-
-
-  postName.textContent =
-    post.name;
-
-  postId.textContent =
-    post.id;
-
-
-  updateModal();
-
-
-  modal.classList.remove("hidden");
-}
-
-
-function updateModal() {
-
-  if (!currentPost) {
-    return;
-  }
-
-
-  const shiftInfo =
-    document.getElementById("shiftInfo");
-
-
-  const shiftButton =
-    document.getElementById("shiftBtn");
-
-
-  const checkForm =
-    document.getElementById("checkForm");
-
-
-  if (!shiftStarted) {
-
-    shiftInfo.textContent =
-      "Вы ещё не заступили на этот пост.";
-
-    shiftButton.classList.remove("hidden");
-
-    checkForm.classList.add("hidden");
-
-    return;
-  }
-
-
-  shiftButton.classList.add("hidden");
-
-  checkForm.classList.remove("hidden");
-
-
-  if (nextCheckTime) {
-
-    document.getElementById("nextCheck").textContent =
-      "Следующая отметка: " +
-      nextCheckTime.toLocaleTimeString(
-        "ru-RU"
-      );
-
-  }
-}
-
-
-// =====================================================
-// ДВУХЧАСОВАЯ ОТМЕТКА
-// =====================================================
+/* =========================
+   ПРОВЕРКА КАЖДЫЕ 2 ЧАСА
+========================= */
 
 async function saveCheck() {
-
   if (!currentPost) {
-
     alert("Пост не выбран.");
-
     return;
   }
-
 
   if (!currentEmployee) {
-
-    alert("Сотрудник не определён.");
-
+    alert("Сотрудник не выбран.");
     return;
   }
 
+  const incidentRadio =
+    document.querySelector(
+      'input[name="incidentYes"]:checked'
+    );
 
   const hasIncident =
-    document.getElementById(
-      "incidentYes"
-    ).checked;
-
-
-  const description =
-    document.getElementById(
-      "checkDescription"
-    ).value.trim();
-
-
-  if (
-    hasIncident &&
-    !description
-  ) {
-
-    alert(
-      "Если произошло происшествие, необходимо его описать."
+    incidentRadio &&
+    (
+      incidentRadio.value === "yes" ||
+      incidentRadio.value === "Да" ||
+      incidentRadio.value === "true"
     );
 
+  const descriptionEl = $("checkDescription");
+  const categoryEl = $("incidentCategory");
+
+  const description = descriptionEl
+    ? descriptionEl.value.trim()
+    : "";
+
+  const category = categoryEl
+    ? categoryEl.value
+    : "";
+
+  if (hasIncident && !description) {
+    alert(
+      "Если произошло происшествие, необходимо описать, что произошло."
+    );
     return;
   }
 
-
-  const button =
-    document.getElementById(
-      "saveBtn"
-    );
-
-
-  button.disabled = true;
-
-  button.textContent =
-    "Сохранение...";
-
-
   try {
+    const result = await sendPost({
+      action: "check",
 
-    const response =
-      await fetch(API_URL, {
+      employee:
+        currentEmployee.name ||
+        currentEmployee.employeeName ||
+        currentEmployee["ФИО"],
 
-        method: "POST",
+      employeeId:
+        currentEmployee.id ||
+        currentEmployee.employeeId ||
+        currentEmployee["ID"],
 
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8"
-        },
+      post:
+        currentPost.name ||
+        currentPost.postName ||
+        currentPost["Название"],
 
-        body: JSON.stringify({
+      postId:
+        currentPost.id ||
+        currentPost.postId,
 
-          action: "check",
+      onPost: true,
 
-          employee:
-            currentEmployee.name,
+      hasIncident: Boolean(hasIncident),
 
-          employeeId:
-            currentEmployee.id,
+      category: category,
 
-          post:
-            currentPost.name,
+      description: description
+    });
 
-          postId:
-            currentPost.id,
-
-          onPost: true,
-
-          hasIncident:
-            hasIncident,
-
-          description:
-            description,
-
-          category:
-            document.getElementById(
-              "incidentCategory"
-            ).value
-
-        })
-
-      });
-
-
-    const data =
-      await response.json();
-
-
-    if (!data.success) {
-
+    if (!result.ok) {
       throw new Error(
-        data.message ||
-        "Ошибка сервера"
+        result.error || "Ошибка сохранения"
       );
     }
 
+    lastCheckTime = new Date();
 
-    lastCheckTime =
-      new Date();
-
-
-    nextCheckTime =
-      new Date(
-        lastCheckTime.getTime() +
-        2 * 60 * 60 * 1000
-      );
-
-
-    shiftStarted = true;
+    nextCheckTime = new Date(
+      Date.now() + 2 * 60 * 60 * 1000
+    );
 
     saveState();
 
-
-    resetCheckForm();
-
     updateMainScreen();
 
-    closeModal();
-
-
     alert(
-      "✓ Отметка принята\n\n" +
-      currentPost.name +
-      "\n" +
-      "Время: " +
-      new Date().toLocaleTimeString(
-        "ru-RU"
-      ) +
-      "\n\n" +
-      "Следующая отметка через 2 часа."
+      hasIncident
+        ? "Отметка сохранена. Происшествие зарегистрировано."
+        : "Отметка сохранена.\n\nВы на посту. Происшествий не было."
     );
 
-
+    clearCheckForm();
+    closePost();
   } catch (error) {
+    console.error(error);
 
     alert(
-      "Не удалось сохранить отметку:\n" +
+      "Не удалось сохранить отметку.\n\n" +
       error.message
     );
-
-  } finally {
-
-    button.disabled = false;
-
-    button.textContent =
-      "Подтвердить отметку";
-
   }
 }
 
 
-// =====================================================
-// СРОЧНОЕ ПРОИСШЕСТВИЕ
-// =====================================================
+function clearCheckForm() {
+  const description = $("checkDescription");
+
+  if (description) {
+    description.value = "";
+  }
+
+  const category = $("incidentCategory");
+
+  if (category) {
+    category.selectedIndex = 0;
+  }
+
+  const noIncident = document.querySelector(
+    'input[name="incidentYes"][value="no"]'
+  );
+
+  if (noIncident) {
+    noIncident.checked = true;
+  }
+}
+
+
+/* =========================
+   БЫСТРОЕ ПРОИСШЕСТВИЕ
+========================= */
 
 function openIncident() {
+  const modal = $("incidentModal");
 
-  document
-    .getElementById("incidentModal")
-    .classList.remove("hidden");
-}
-
-
-async function saveIncident() {
-
-  if (!currentEmployee) {
-
-    alert("Сотрудник не определён.");
-
-    return;
+  if (modal) {
+    modal.classList.remove("hidden");
   }
-
-
-  const post =
-    currentPost;
-
-
-  const description =
-    document.getElementById(
-      "incidentDescription"
-    ).value.trim();
-
-
-  const category =
-    document.getElementById(
-      "incidentType"
-    ).value;
-
-
-  if (!description) {
-
-    alert(
-      "Опишите, что произошло."
-    );
-
-    return;
-  }
-
-
-  const button =
-    document.getElementById(
-      "incidentSaveBtn"
-    );
-
-
-  button.disabled = true;
-
-  button.textContent =
-    "Отправка...";
-
-
-  try {
-
-    const response =
-      await fetch(API_URL, {
-
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "text/plain;charset=utf-8"
-        },
-
-        body: JSON.stringify({
-
-          action: "incident",
-
-          employee:
-            currentEmployee.name,
-
-          employeeId:
-            currentEmployee.id,
-
-          post:
-            post ? post.name : "",
-
-          postId:
-            post ? post.id : "",
-
-          category:
-            category,
-
-          description:
-            description
-
-        })
-
-      });
-
-
-    const data =
-      await response.json();
-
-
-    if (!data.success) {
-
-      throw new Error(
-        data.message ||
-        "Ошибка сервера"
-      );
-    }
-
-
-    document
-      .getElementById(
-        "incidentDescription"
-      )
-      .value = "";
-
-
-    document
-      .getElementById(
-        "incidentModal"
-      )
-      .classList.add("hidden");
-
-
-    alert(
-      "✓ Происшествие зарегистрировано."
-    );
-
-
-  } catch (error) {
-
-    alert(
-      "Не удалось отправить происшествие:\n" +
-      error.message
-    );
-
-  } finally {
-
-    button.disabled = false;
-
-    button.textContent =
-      "Отправить происшествие";
-
-  }
-}
-
-
-// =====================================================
-// ЗАКРЫТИЕ
-// =====================================================
-
-async function closeModal() {
-
-  await stopScanner();
-
-  modal.classList.add("hidden");
 }
 
 
 function closeIncident() {
-
-  document
-    .getElementById(
-      "incidentModal"
-    )
-    .classList.add("hidden");
+  hide("incidentModal");
 }
 
 
-// =====================================================
-// ВРЕМЯ
-// =====================================================
+async function saveIncident() {
+  if (!currentEmployee) {
+    alert("Сотрудник не выбран.");
+    return;
+  }
 
-function updateTime() {
+  const categoryEl = $("incidentCategory2");
+  const descriptionEl = $("incidentDescription");
 
-  const element =
-    document.getElementById(
-      "currentTime"
-    );
+  const category = categoryEl
+    ? categoryEl.value
+    : "";
 
-  if (element) {
+  const description = descriptionEl
+    ? descriptionEl.value.trim()
+    : "";
 
-    element.textContent =
-      new Date().toLocaleString(
-        "ru-RU"
+  if (!description) {
+    alert("Опишите, что произошло.");
+    return;
+  }
+
+  try {
+    const result = await sendPost({
+      action: "incident",
+
+      employee:
+        currentEmployee.name ||
+        currentEmployee.employeeName ||
+        currentEmployee["ФИО"],
+
+      employeeId:
+        currentEmployee.id ||
+        currentEmployee.employeeId ||
+        currentEmployee["ID"],
+
+      post: currentPost
+        ? (
+            currentPost.name ||
+            currentPost.postName ||
+            currentPost["Название"]
+          )
+        : "",
+
+      postId: currentPost
+        ? (
+            currentPost.id ||
+            currentPost.postId
+          )
+        : "",
+
+      category: category,
+
+      description: description
+    });
+
+    if (!result.ok) {
+      throw new Error(
+        result.error || "Ошибка сохранения"
       );
+    }
+
+    alert("Происшествие зарегистрировано.");
+
+    if (categoryEl) {
+      categoryEl.selectedIndex = 0;
+    }
+
+    if (descriptionEl) {
+      descriptionEl.value = "";
+    }
+
+    closeIncident();
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      "Не удалось зарегистрировать происшествие.\n\n" +
+      error.message
+    );
   }
 }
 
 
-// =====================================================
-// СОСТОЯНИЕ
-// =====================================================
+/* =========================
+   ОТПРАВКА В GOOGLE SHEETS
+========================= */
+
+async function sendPost(data) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+
+    body: JSON.stringify(data)
+  });
+
+  const text = await response.text();
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Ответ сервера:", text);
+
+    throw new Error(
+      "Сервер вернул некорректный ответ."
+    );
+  }
+}
+
+
+/* =========================
+   СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+========================= */
 
 function saveState() {
+  const state = {
+    currentPost: currentPost,
+    currentEmployee: currentEmployee,
+    shiftStarted: shiftStarted,
+    lastCheckTime: lastCheckTime
+      ? lastCheckTime.toISOString()
+      : null,
+    nextCheckTime: nextCheckTime
+      ? nextCheckTime.toISOString()
+      : null
+  };
 
   localStorage.setItem(
-    "kontrolPostovState",
-
-    JSON.stringify({
-
-      employeeId:
-        currentEmployee
-          ? currentEmployee.id
-          : null,
-
-      postId:
-        currentPost
-          ? currentPost.id
-          : null,
-
-      shiftStarted:
-        shiftStarted,
-
-      lastCheckTime:
-        lastCheckTime
-          ? lastCheckTime.toISOString()
-          : null,
-
-      nextCheckTime:
-        nextCheckTime
-          ? nextCheckTime.toISOString()
-          : null
-
-    })
+    "guardAppState",
+    JSON.stringify(state)
   );
 }
 
 
 function restoreState() {
-
   try {
-
     const saved =
-      JSON.parse(
-        localStorage.getItem(
-          "kontrolPostovState"
-        )
-      );
+      localStorage.getItem("guardAppState");
 
+    if (!saved) return;
 
-    if (!saved) {
-      return;
-    }
+    const state = JSON.parse(saved);
 
-
-    if (saved.employeeId) {
-
-      currentEmployee =
-        employees.find(
-          e =>
-            e.id === saved.employeeId
-        ) ||
-        currentEmployee;
-    }
-
-
-    if (saved.postId) {
-
-      currentPost =
-        posts.find(
-          p =>
-            p.id === saved.postId
-        ) ||
-        null;
-    }
-
+    currentPost = state.currentPost || null;
+    currentEmployee = state.currentEmployee || null;
 
     shiftStarted =
-      saved.shiftStarted === true;
+      Boolean(state.shiftStarted);
 
+    lastCheckTime =
+      state.lastCheckTime
+        ? new Date(state.lastCheckTime)
+        : null;
 
-    if (saved.lastCheckTime) {
+    nextCheckTime =
+      state.nextCheckTime
+        ? new Date(state.nextCheckTime)
+        : null;
 
-      lastCheckTime =
-        new Date(
-          saved.lastCheckTime
-        );
-    }
-
-
-    if (saved.nextCheckTime) {
-
-      nextCheckTime =
-        new Date(
-          saved.nextCheckTime
-        );
-    }
-
-
+    updateEmployee();
     updateMainScreen();
-
   } catch (error) {
-
     console.error(
-      "Ошибка восстановления:",
+      "Ошибка восстановления состояния:",
       error
     );
   }
 }
 
 
-// =====================================================
-// ГЛАВНЫЙ ЭКРАН
-// =====================================================
+/* =========================
+   ГЛАВНЫЙ ЭКРАН
+========================= */
 
 function updateMainScreen() {
-
-  const currentPostElement =
-    document.getElementById(
-      "currentPost"
-    );
-
-
-  const nextCheckElement =
-    document.getElementById(
-      "mainNextCheck"
-    );
-
-
   if (currentPost) {
+    const name =
+      currentPost.name ||
+      currentPost.postName ||
+      currentPost["Название"] ||
+      "Пост";
 
-    currentPostElement.textContent =
-      currentPost.name;
-
-  } else {
-
-    currentPostElement.textContent =
-      "Пост не выбран";
+    setText("currentPost", name);
   }
 
-
-  if (
-    nextCheckTime &&
-    shiftStarted
-  ) {
-
-    nextCheckElement.textContent =
-      "Следующая отметка: " +
-      nextCheckTime.toLocaleTimeString(
-        "ru-RU"
-      );
-
+  if (nextCheckTime) {
+    setText(
+      "mainNextCheck",
+      formatDateTime(nextCheckTime)
+    );
   } else {
-
-    nextCheckElement.textContent =
-      "Заступите на пост, чтобы начать контроль.";
+    setText(
+      "mainNextCheck",
+      "После заступления на пост"
+    );
   }
+
+  updateEmployee();
 }
 
 
-function resetCheckForm() {
+/* =========================
+   ВРЕМЯ
+========================= */
 
-  document.getElementById(
-    "incidentNo"
-  ).checked = true;
+function updateTime() {
+  const now = new Date();
 
+  const text =
+    now.toLocaleDateString("ru-RU") +
+    " " +
+    now.toLocaleTimeString("ru-RU");
 
-  document.getElementById(
-    "incidentYes"
-  ).checked = false;
-
-
-  document.getElementById(
-    "checkDescription"
-  ).value = "";
-
-
-  document.getElementById(
-    "incidentCategory"
-  ).value = "Другое";
+  setText("currentTime", text);
 }
 
 
-function getInitials(name) {
+function formatDateTime(date) {
+  if (!date) return "—";
 
-  return String(name)
-    .split(" ")
-    .filter(Boolean)
-    .map(
-      word =>
-        word[0]
-          ? word[0].toUpperCase()
-          : ""
-    )
-    .slice(0, 2)
-    .join("");
+  return date.toLocaleString(
+    "ru-RU",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
 }
