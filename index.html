@@ -1,73 +1,463 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
-<title>Контроль постов</title>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#111827">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+
+  <title>Контроль постов</title>
 </head>
+
 <body>
+
 <main class="app">
-<header class="topbar">
-  <div><div class="eyebrow">СИСТЕМА КОНТРОЛЯ</div><h1>Контроль постов</h1></div>
-  <div class="avatar">ИИ</div>
-</header>
 
-<section class="user-card">
-  <div><div class="muted">Сотрудник</div><strong>Иванов И.И.</strong><div class="muted">ЧОО «Пример» · смена 08:00–20:00</div></div>
-  <span class="online">● Онлайн</span>
-</section>
+  <!-- ШАПКА -->
+  <header class="topbar">
 
-<section class="hero">
-  <div class="hero-icon">QR</div>
-  <h2>Проверить пост</h2>
-  <p>Наведите камеру на QR-код, размещённый на посту. Приложение автоматически определит место проверки.</p>
-  <button class="primary" id="scanBtn">Сканировать QR-код</button>
-  <button class="secondary" id="demoBtn">Демо: открыть КПП №1</button>
-  <div id="reader" class="reader hidden"></div>
-  <div id="scanError" class="error"></div>
-</section>
+    <div>
+      <div class="eyebrow">
+        СИСТЕМА КОНТРОЛЯ
+      </div>
 
-<section class="section">
-<div class="section-title"><h3>Последние проверки</h3><button class="link-btn">Все</button></div>
-<article class="check"><div class="check-icon ok">✓</div><div class="check-main"><strong>КПП №1</strong><span>Иванов И.И. · 14:32</span></div><span class="status ok-text">Норма</span></article>
-<article class="check"><div class="check-icon ok">✓</div><div class="check-main"><strong>Автопарк</strong><span>Иванов И.И. · 14:03</span></div><span class="status ok-text">Норма</span></article>
-</section>
+      <h1>Контроль постов</h1>
+    </div>
 
-<section class="section">
-<h3>Быстрые действия</h3>
-<div class="actions">
-<button class="action" id="incidentBtn"><span>⚠️</span><b>Сообщить о происшествии</b></button>
-<button class="action"><span>📋</span><b>Моя история</b></button>
-</div>
-</section>
+    <div class="avatar" id="avatar">О</div>
+
+  </header>
+
+
+  <!-- СОТРУДНИК -->
+  <section class="user-card">
+
+    <div>
+      <div class="muted">
+        Сотрудник
+      </div>
+
+      <strong id="employeeName">
+        Загрузка...
+      </strong>
+
+      <div class="muted">
+        Охранник
+      </div>
+    </div>
+
+    <span class="online">
+      ● Онлайн
+    </span>
+
+  </section>
+
+
+  <!-- СТАТУС API -->
+  <section class="status-card">
+
+    <div class="muted">
+      Состояние системы
+    </div>
+
+    <strong id="apiStatus">
+      Подключение...
+    </strong>
+
+  </section>
+
+
+  <!-- ПРОВЕРКА ПОСТА -->
+  <section class="hero">
+
+    <div class="hero-icon">
+      QR
+    </div>
+
+    <h2>
+      Проверить пост
+    </h2>
+
+    <p>
+      Наведите камеру на QR-код,
+      размещённый на посту.
+      Приложение автоматически определит
+      номер поста.
+    </p>
+
+    <button
+      class="primary"
+      id="scanBtn"
+      type="button"
+    >
+      Сканировать QR-код
+    </button>
+
+    <button
+      class="secondary"
+      id="demoBtn"
+      type="button"
+    >
+      Демо: открыть Пост №1
+    </button>
+
+    <div
+      id="reader"
+      class="reader hidden"
+    ></div>
+
+    <div
+      id="scanError"
+      class="error"
+    ></div>
+
+  </section>
+
+
+  <!-- ТЕКУЩИЙ ПОСТ -->
+  <section class="section">
+
+    <h2>
+      Текущий пост
+    </h2>
+
+    <div class="post-card">
+
+      <strong id="currentPost">
+        Пост не выбран
+      </strong>
+
+      <div class="muted">
+        Следующая проверка:
+      </div>
+
+      <div id="mainNextCheck">
+        После заступления на пост
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- БЫСТРОЕ ПРОИСШЕСТВИЕ -->
+  <section class="section">
+
+    <button
+      class="danger"
+      id="incidentBtn"
+      type="button"
+    >
+      Сообщить о происшествии
+    </button>
+
+  </section>
+
+
+  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+  <nav class="bottom-nav">
+
+    <div class="nav-item active">
+      <span>●</span>
+      <span>Главная</span>
+    </div>
+
+    <div class="nav-item">
+      <span>✓</span>
+      <span>Проверки</span>
+    </div>
+
+    <div class="nav-item">
+      <span>!</span>
+      <span>Происшествия</span>
+    </div>
+
+  </nav>
+
 </main>
 
-<nav class="bottom-nav">
-<button class="nav active">⌂<small>Главная</small></button>
-<button class="nav">✓<small>Проверки</small></button>
-<button class="nav">⚠<small>События</small></button>
-<button class="nav">☰<small>Профиль</small></button>
-</nav>
 
-<div class="modal hidden" id="modal">
-<div class="modal-card">
-<button class="close" id="closeBtn">×</button>
-<div class="eyebrow">ПРОВЕРКА ПОСТА</div>
-<h2 id="postName">КПП №1</h2>
-<p class="muted">ID: <span id="postId">P-001</span></p>
-<div class="time" id="currentTime"></div>
-<label>Результат</label>
-<select id="result"><option>Нарушений нет</option><option>Выявлено нарушение</option><option>Происшествие</option></select>
-<label>Комментарий</label>
-<textarea id="comment" placeholder="При необходимости укажите подробности"></textarea>
-<button class="primary" id="saveBtn">Зарегистрировать проверку</button>
-</div>
+<!-- =========================
+     МОДАЛЬНОЕ ОКНО ПОСТА
+========================= -->
+
+<div
+  id="modal"
+  class="modal hidden"
+>
+
+  <div class="modal-content">
+
+    <button
+      id="closeBtn"
+      class="close"
+      type="button"
+    >
+      ×
+    </button>
+
+    <div class="muted">
+      Выбранный пост
+    </div>
+
+    <h2 id="postName">
+      Пост
+    </h2>
+
+    <div
+      class="muted"
+      id="postId"
+    >
+      P-001
+    </div>
+
+    <div
+      class="time"
+      id="currentTime"
+    >
+      —
+    </div>
+
+
+    <!-- НАЧАЛО СМЕНЫ -->
+
+    <button
+      id="shiftBtn"
+      class="primary"
+      type="button"
+    >
+      Заступить на пост
+    </button>
+
+
+    <!-- ПРОВЕРКА -->
+
+    <div class="check-form">
+
+      <h3>
+        Проверка
+      </h3>
+
+      <p>
+        Вы сейчас на посту?
+      </p>
+
+      <label>
+        <input
+          type="radio"
+          name="onPost"
+          value="yes"
+          checked
+        >
+        Да, я на посту
+      </label>
+
+
+      <p>
+        Были ли происшествия за последние 2 часа?
+      </p>
+
+      <label>
+        <input
+          type="radio"
+          name="incidentYes"
+          value="no"
+          checked
+        >
+        Нет, происшествий не было
+      </label>
+
+      <label>
+        <input
+          type="radio"
+          name="incidentYes"
+          value="yes"
+        >
+        Да, было происшествие
+      </label>
+
+
+      <label for="incidentCategory">
+        Категория происшествия
+      </label>
+
+      <select id="incidentCategory">
+
+        <option value="">
+          Выберите категорию
+        </option>
+
+        <option value="Постороннее лицо">
+          Постороннее лицо
+        </option>
+
+        <option value="Нарушение порядка">
+          Нарушение порядка
+        </option>
+
+        <option value="Конфликт">
+          Конфликт
+        </option>
+
+        <option value="Повреждение имущества">
+          Повреждение имущества
+        </option>
+
+        <option value="Неисправность">
+          Неисправность
+        </option>
+
+        <option value="Пожар / задымление">
+          Пожар / задымление
+        </option>
+
+        <option value="Попытка проникновения">
+          Попытка проникновения
+        </option>
+
+        <option value="Другое">
+          Другое
+        </option>
+
+      </select>
+
+
+      <label for="checkDescription">
+        Описание
+      </label>
+
+      <textarea
+        id="checkDescription"
+        rows="4"
+        placeholder="Опишите, что произошло"
+      ></textarea>
+
+
+      <button
+        id="saveBtn"
+        class="primary"
+        type="button"
+      >
+        Подтвердить проверку
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
 
+
+<!-- =========================
+     МОДАЛЬНОЕ ОКНО ПРОИСШЕСТВИЯ
+========================= -->
+
+<div
+  id="incidentModal"
+  class="modal hidden"
+>
+
+  <div class="modal-content">
+
+    <button
+      id="incidentCloseBtn"
+      class="close"
+      type="button"
+    >
+      ×
+    </button>
+
+    <h2>
+      Сообщить о происшествии
+    </h2>
+
+    <p class="muted">
+      Сообщение будет сразу отправлено
+      в журнал происшествий.
+    </p>
+
+
+    <label for="incidentCategory2">
+      Категория
+    </label>
+
+    <select id="incidentCategory2">
+
+      <option value="">
+        Выберите категорию
+      </option>
+
+      <option value="Постороннее лицо">
+        Постороннее лицо
+      </option>
+
+      <option value="Нарушение порядка">
+        Нарушение порядка
+      </option>
+
+      <option value="Конфликт">
+        Конфликт
+      </option>
+
+      <option value="Повреждение имущества">
+        Повреждение имущества
+      </option>
+
+      <option value="Неисправность">
+        Неисправность
+      </option>
+
+      <option value="Пожар / задымление">
+        Пожар / задымление
+      </option>
+
+      <option value="Попытка проникновения">
+        Попытка проникновения
+      </option>
+
+      <option value="Другое">
+        Другое
+      </option>
+
+    </select>
+
+
+    <label for="incidentDescription">
+      Что произошло?
+    </label>
+
+    <textarea
+      id="incidentDescription"
+      rows="6"
+      placeholder="Подробно опишите происшествие"
+    ></textarea>
+
+
+    <button
+      id="incidentSaveBtn"
+      class="danger"
+      type="button"
+    >
+      Отправить сообщение
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- QR СКАНЕР -->
 <script src="https://unpkg.com/html5-qrcode"></script>
+
+<!-- НАШ JAVASCRIPT -->
 <script src="app.js"></script>
+
 </body>
 </html>
