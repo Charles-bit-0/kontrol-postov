@@ -6,7 +6,11 @@ let posts = [];
 
 let currentPost = null;
 
-let currentEmployee = null;
+if(!currentEmployee){
+
+  show("employeeModal");
+
+};
 
 let shiftStarted = false;
 
