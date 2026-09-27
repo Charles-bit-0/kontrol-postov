@@ -1,7 +1,7 @@
 const API_URL =
   "https://script.google.com/macros/s/AKfycbxutkC2ZMlHOlhzelf7BzjPizHduFwUy8jCCrdAWCuQLvxdB4yVxNRVhf0T9ZIU9vYujA/exec";
 
-let scanner = null;
+
 let posts = [];
 let employees = [];
 
@@ -12,768 +12,1391 @@ let shiftStarted = false;
 let lastCheckTime = null;
 let nextCheckTime = null;
 
-function $(id) {
+
+/*
+===========================
+  ЗАПУСК ПРИЛОЖЕНИЯ
+===========================
+*/
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+
+    bindButtons();
+
+    restoreState();
+
+    updateTime();
+
+    setInterval(
+      updateTime,
+      1000
+    );
+
+    await loadData();
+
+    updateScreen();
+
+  }
+);
+
+
+
+/*
+===========================
+  УТИЛИТЫ
+===========================
+*/
+
+function $(id){
+
   return document.getElementById(id);
+
 }
 
-function setText(id, value) {
-  const el = $(id);
-  if (el) el.textContent = value;
+
+function text(id,value){
+
+  const el=$(id);
+
+  if(el){
+    el.textContent=value;
+  }
+
 }
 
-function show(id) {
-  const el = $(id);
-  if (el) el.classList.remove("hidden");
+
+function show(id){
+
+  const el=$(id);
+
+  if(el){
+    el.classList.remove("hidden");
+  }
+
 }
 
-function hide(id) {
-  const el = $(id);
-  if (el) el.classList.add("hidden");
+
+function hide(id){
+
+  const el=$(id);
+
+  if(el){
+    el.classList.add("hidden");
+  }
+
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  bindButtons();
-  restoreState();
-  updateTime();
-  setInterval(updateTime, 1000);
 
-  await loadData();
-  updateMainScreen();
+
+/*
+===========================
+  КНОПКИ
+===========================
+*/
+
+
+function bindButtons(){
+
+
+  const scan=$("scanBtn");
+
+  if(scan){
+
+    scan.onclick=startScanner;
+
+  }
+
+
+  const demo=$("demoBtn");
+
+  if(demo){
+
+    demo.onclick=()=>{
+
+      openPost("P-001");
+
+    };
+
+  }
+
+
+
+  const close=$("closeBtn");
+
+  if(close){
+
+    close.onclick=closeModal;
+
+  }
+
+
+
+  const shift=$("shiftBtn");
+
+  if(shift){
+
+    shift.onclick=startShift;
+
+  }
+
+
+
+  const save=$("saveBtn");
+
+  if(save){
+
+    save.onclick=saveCheck;
+
+  }
+
+
+
+  const incident=$("incidentBtn");
+
+  if(incident){
+
+    incident.onclick=openIncident;
+
+  }
+
+
+
+  const incidentSave=$("incidentSaveBtn");
+
+  if(incidentSave){
+
+    incidentSave.onclick=saveIncident;
+
+  }
+
+
+
+  const incidentClose=$("incidentCloseBtn");
+
+  if(incidentClose){
+
+    incidentClose.onclick=closeIncident;
+
+  }
+
+
+}
+
+
+
+/*
+===========================
+  ЗАГРУЗКА GOOGLE SHEETS
+===========================
+*/
+
+
+async function loadData(){
+
+try{
+
+
+const postsResponse =
+await fetch(
+ API_URL+"?action=posts"
+);
+
+
+const postsData =
+await postsResponse.json();
+
+
+
+/*
+ Поддерживаем разные ответы API
+*/
+
+
+if(
+ Array.isArray(postsData)
+){
+
+ posts=postsData;
+
+}
+
+else if(
+ Array.isArray(postsData.posts)
+){
+
+ posts=postsData.posts;
+
+}
+
+else if(
+ Array.isArray(postsData.data)
+){
+
+ posts=postsData.data;
+
+}
+
+
+
+const employeesResponse =
+await fetch(
+ API_URL+"?action=employees"
+);
+
+
+
+const employeesData =
+await employeesResponse.json();
+
+
+
+if(
+ Array.isArray(employeesData)
+){
+
+ employees=employeesData;
+
+}
+
+else if(
+ Array.isArray(employeesData.employees)
+){
+
+ employees=employeesData.employees;
+
+}
+
+else if(
+ Array.isArray(employeesData.data)
+){
+
+ employees=employeesData.data;
+
+}
+
+
+
+console.log(
+ "Посты:",
+ posts
+);
+
+
+console.log(
+ "Сотрудники:",
+ employees
+);
+
+
+
+/*
+ Берём первого сотрудника
+*/
+
+
+if(
+ employees.length>0
+){
+
+ currentEmployee =
+ normalizeEmployee(
+  employees[0]
+ );
+
+}
+
+
+
+updateEmployee();
+
+
+
+}
+catch(error){
+
+
+console.error(
+ "Ошибка загрузки",
+ error
+);
+
+
+text(
+ "apiStatus",
+ "Ошибка подключения"
+);
+
+
+}
+
+
+}
+
+
+
+/*
+===========================
+  СОТРУДНИК
+===========================
+*/
+
+
+function normalizeEmployee(e){
+
+
+return {
+
+
+id:
+e.id ||
+e.ID ||
+e.employeeId ||
+"",
+
+
+name:
+e.name ||
+e.Нame ||
+e.employeeName ||
+e["ФИО"] ||
+e["Имя"] ||
+"Охранник"
+
+
+};
+
+
+}
+
+
+
+function updateEmployee(){
+
+
+if(!currentEmployee){
+
+return;
+
+}
+
+
+text(
+"employeeName",
+currentEmployee.name
+);
+
+
+
+const avatar=$("avatar");
+
+
+if(avatar){
+
+avatar.textContent =
+currentEmployee.name
+.charAt(0)
+.toUpperCase();
+
+}
+
+
+}
+
+
+
+/*
+===========================
+  ПОСТЫ
+===========================
+*/
+
+
+function findPost(id){
+
+
+return posts.find(
+p=>{
+
+return String(
+p.id ||
+p.ID ||
+p.postId
+)
+
+===String(id);
+
+
+}
+
+);
+
+
+}
+
+
+
+function normalizePost(p){
+
+
+return {
+
+
+id:
+p.id ||
+p.ID ||
+p.postId,
+
+
+name:
+p.name ||
+p.title ||
+p.postName ||
+p["Название"] ||
+("Пост "+p.id)
+
+
+};
+
+
+}
+
+
+
+function openPost(id){
+
+
+let post=findPost(id);
+
+
+
+if(post){
+
+currentPost=
+normalizePost(post);
+
+}
+
+else{
+
+
+currentPost={
+
+id:id,
+
+name:"Пост №"+
+String(id)
+.replace(/\D/g,"")
+
+};
+
+
+}
+
+
+
+text(
+"postName",
+currentPost.name
+);
+
+
+text(
+"postId",
+currentPost.id
+);
+
+
+
+text(
+"currentTime",
+new Date()
+.toLocaleString("ru-RU")
+);
+
+
+
+show("modal");
+
+
+
+updateShiftButton();
+
+
+}
+/*
+===========================
+  ЗАСТУПЛЕНИЕ НА ПОСТ
+===========================
+*/
+
+
+async function startShift(){
+
+
+if(!currentPost){
+
+alert(
+"Сначала выберите пост"
+);
+
+return;
+
+}
+
+
+
+if(!currentEmployee){
+
+alert(
+"Сотрудник не выбран"
+);
+
+return;
+
+}
+
+
+
+try{
+
+
+const result =
+await sendToAPI({
+
+action:
+"start_shift",
+
+
+employee:
+currentEmployee.name,
+
+
+employeeId:
+currentEmployee.id,
+
+
+post:
+currentPost.name,
+
+
+postId:
+currentPost.id
+
+
 });
 
 
-/* =========================
-   КНОПКИ
-========================= */
 
-function bindButtons() {
-  const scanBtn = $("scanBtn");
-  if (scanBtn) {
-    scanBtn.addEventListener("click", startScanner);
-  }
+if(
+result.success===false
+){
 
-  const demoBtn = $("demoBtn");
-  if (demoBtn) {
-    demoBtn.addEventListener("click", () => {
-      openPost("P-001");
-    });
-  }
+throw new Error(
+result.message ||
+"Ошибка сервера"
+);
 
-  const closeBtn = $("closeBtn");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", closePost);
-  }
-
-  const shiftBtn = $("shiftBtn");
-  if (shiftBtn) {
-    shiftBtn.addEventListener("click", startShift);
-  }
-
-  const saveBtn = $("saveBtn");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveCheck);
-  }
-
-  const incidentBtn = $("incidentBtn");
-  if (incidentBtn) {
-    incidentBtn.addEventListener("click", openIncident);
-  }
-
-  const incidentSaveBtn = $("incidentSaveBtn");
-  if (incidentSaveBtn) {
-    incidentSaveBtn.addEventListener("click", saveIncident);
-  }
-
-  const incidentCloseBtn = $("incidentCloseBtn");
-  if (incidentCloseBtn) {
-    incidentCloseBtn.addEventListener("click", closeIncident);
-  }
 }
 
 
-/* =========================
-   ЗАГРУЗКА ДАННЫХ
-========================= */
 
-async function loadData() {
-  try {
-    setText("apiStatus", "Подключение...");
+shiftStarted=true;
 
-    const postsResponse = await fetch(API_URL + "?action=posts");
-    const postsData = await postsResponse.json();
 
-    if (postsData.ok && Array.isArray(postsData.data)) {
-      posts = postsData.data;
-    } else if (Array.isArray(postsData)) {
-      posts = postsData;
-    }
+lastCheckTime=
+new Date();
 
-    const employeesResponse =
-      await fetch(API_URL + "?action=employees");
 
-    const employeesData = await employeesResponse.json();
 
-    if (employeesData.ok && Array.isArray(employeesData.data)) {
-      employees = employeesData.data;
-    } else if (Array.isArray(employeesData)) {
-      employees = employeesData;
-    }
+nextCheckTime=
+new Date(
+Date.now()
++
+2*60*60*1000
+);
 
-    setText("apiStatus", "Подключено");
 
-    if (!currentEmployee && employees.length > 0) {
-      currentEmployee = employees[0];
-    }
 
-    updateEmployee();
-  } catch (error) {
-    console.error("Ошибка загрузки:", error);
-    setText("apiStatus", "Ошибка подключения");
-  }
+saveState();
+
+
+updateShiftButton();
+
+
+updateScreen();
+
+
+
+alert(
+"Вы заступили на пост\n\n"+
+currentPost.name+
+"\n\nСледующая отметка через 2 часа"
+);
+
+
+
+}
+catch(error){
+
+
+console.error(error);
+
+
+alert(
+"Ошибка заступления:\n"+
+error.message
+);
+
+
 }
 
 
-/* =========================
-   СОТРУДНИК
-========================= */
 
-function updateEmployee() {
-  if (!currentEmployee) return;
-
-  const name =
-    currentEmployee.name ||
-    currentEmployee.employeeName ||
-    currentEmployee["ФИО"] ||
-    "Сотрудник";
-
-  setText("employeeName", name);
-
-  const avatar = $("avatar");
-
-  if (avatar) {
-    const firstLetter = name.trim().charAt(0).toUpperCase();
-    avatar.textContent = firstLetter || "О";
-  }
 }
 
 
-/* =========================
-   СКАНЕР QR
-========================= */
 
-async function startScanner() {
-  const reader = $("reader");
 
-  if (!reader) {
-    alert("Элемент сканера не найден.");
-    return;
-  }
 
-  show("reader");
+function updateShiftButton(){
 
-  try {
-    if (scanner) {
-      try {
-        await scanner.stop();
-      } catch (e) {}
-    }
 
-    scanner = new Html5Qrcode("reader");
+const btn=$("shiftBtn");
 
-    await scanner.start(
-      { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: {
-          width: 250,
-          height: 250
-        }
-      },
-      (decodedText) => {
-        handleQrCode(decodedText);
-      },
-      () => {}
-    );
-  } catch (error) {
-    console.error("Ошибка камеры:", error);
 
-    const scanError = $("scanError");
+if(!btn){
 
-    if (scanError) {
-      scanError.textContent =
-        "Не удалось открыть камеру. Разрешите доступ к камере.";
-    } else {
-      alert(
-        "Не удалось открыть камеру. Разрешите доступ к камере."
-      );
-    }
-  }
+return;
+
 }
 
 
-async function handleQrCode(text) {
-  let postId = null;
 
-  const match = String(text).match(/P-\d{3}/i);
+if(shiftStarted){
 
-  if (match) {
-    postId = match[0].toUpperCase();
-  }
 
-  if (!postId) {
-    try {
-      const url = new URL(text);
+btn.textContent=
+"Пост уже принят";
 
-      postId =
-        url.searchParams.get("post") ||
-        url.searchParams.get("postId");
-    } catch (e) {}
-  }
 
-  if (!postId) {
-    alert("QR-код не содержит номера поста.");
-    return;
-  }
+btn.disabled=true;
 
-  if (scanner) {
-    try {
-      await scanner.stop();
-    } catch (e) {}
-  }
 
-  hide("reader");
+}
+else{
 
-  openPost(postId);
+
+btn.textContent=
+"Заступить на пост";
+
+
+btn.disabled=false;
+
+
 }
 
 
-/* =========================
-   ПОСТ
-========================= */
 
-function findPost(id) {
-  return posts.find(
-    p =>
-      String(p.id || p.postId || p["ID"]) === String(id)
-  );
 }
 
 
-function openPost(id) {
-  currentPost = findPost(id);
 
-  if (!currentPost) {
-    currentPost = {
-      id: id,
-      name: "Пост №" + parseInt(String(id).replace(/\D/g, ""), 10)
-    };
-  }
+/*
+===========================
+  ПРОВЕРКА КАЖДЫЕ 2 ЧАСА
+===========================
+*/
 
-  const postName =
-    currentPost.name ||
-    currentPost.postName ||
-    currentPost["Название"] ||
-    "Пост";
 
-  setText("postName", postName);
-  setText("postId", currentPost.id || id);
+async function saveCheck(){
 
-  const currentTime = new Date();
 
-  setText(
-    "currentTime",
-    currentTime.toLocaleString("ru-RU")
-  );
 
-  const modal = $("modal");
+if(!currentPost){
 
-  if (modal) {
-    modal.classList.remove("hidden");
-  }
+alert(
+"Пост не выбран"
+);
 
-  updateShiftButton();
+return;
+
 }
 
 
-function closePost() {
-  hide("modal");
+
+if(!currentEmployee){
+
+alert(
+"Сотрудник не выбран"
+);
+
+return;
+
 }
 
 
-/* =========================
-   НАЧАЛО СМЕНЫ
-========================= */
 
-async function startShift() {
-  if (!currentPost) {
-    alert("Сначала выберите пост.");
-    return;
-  }
+const incident =
+document.querySelector(
+'input[name="incidentYes"]:checked'
+);
 
-  if (!currentEmployee) {
-    alert("Сотрудник не выбран.");
-    return;
-  }
 
-  const postId =
-    currentPost.id ||
-    currentPost.postId;
 
-  const employeeId =
-    currentEmployee.id ||
-    currentEmployee.employeeId ||
-    currentEmployee["ID"];
+const hasIncident =
+incident &&
+incident.value==="yes";
 
-  try {
-    const result = await sendPost({
-      action: "start_shift",
 
-      employee:
-        currentEmployee.name ||
-        currentEmployee.employeeName ||
-        currentEmployee["ФИО"],
 
-      employeeId: employeeId,
+const description =
+$("checkDescription")
+?
+$("checkDescription").value.trim()
+:
+"";
 
-      post:
-        currentPost.name ||
-        currentPost.postName ||
-        currentPost["Название"],
 
-      postId: postId
-    });
 
-    if (!result.ok) {
-      throw new Error(
-        result.error || "Не удалось начать смену"
-      );
-    }
+const category =
+$("incidentCategory")
+?
+$("incidentCategory").value
+:
+"";
 
-    shiftStarted = true;
-    lastCheckTime = new Date();
-    nextCheckTime = new Date(
-      Date.now() + 2 * 60 * 60 * 1000
-    );
 
-    saveState();
 
-    updateShiftButton();
-    updateMainScreen();
+if(
+hasIncident &&
+!description
+){
 
-    alert(
-      "Смена начата.\n\nСледующая проверка через 2 часа."
-    );
-  } catch (error) {
-    console.error(error);
+alert(
+"Опишите происшествие"
+);
 
-    alert(
-      "Не удалось начать смену.\n\n" +
-      error.message
-    );
-  }
+return;
+
 }
 
 
-function updateShiftButton() {
-  const button = $("shiftBtn");
 
-  if (!button) return;
+try{
 
-  if (shiftStarted) {
-    button.textContent = "Смена уже начата";
-    button.disabled = true;
-  } else {
-    button.textContent = "Заступить на пост";
-    button.disabled = false;
-  }
+
+const result =
+await sendToAPI({
+
+
+action:
+"check",
+
+
+employee:
+currentEmployee.name,
+
+
+employeeId:
+currentEmployee.id,
+
+
+post:
+currentPost.name,
+
+
+postId:
+currentPost.id,
+
+
+onPost:true,
+
+
+hasIncident:
+hasIncident,
+
+
+category:
+category,
+
+
+description:
+description
+
+
+});
+
+
+
+if(
+result.success===false
+){
+
+throw new Error(
+result.message
+);
+
 }
 
 
-/* =========================
-   ПРОВЕРКА КАЖДЫЕ 2 ЧАСА
-========================= */
 
-async function saveCheck() {
-  if (!currentPost) {
-    alert("Пост не выбран.");
-    return;
-  }
+lastCheckTime=
+new Date();
 
-  if (!currentEmployee) {
-    alert("Сотрудник не выбран.");
-    return;
-  }
 
-  const incidentRadio =
-    document.querySelector(
-      'input[name="incidentYes"]:checked'
-    );
 
-  const hasIncident =
-    incidentRadio &&
-    (
-      incidentRadio.value === "yes" ||
-      incidentRadio.value === "Да" ||
-      incidentRadio.value === "true"
-    );
+nextCheckTime=
+new Date(
+Date.now()
++
+2*60*60*1000
+);
 
-  const descriptionEl = $("checkDescription");
-  const categoryEl = $("incidentCategory");
 
-  const description = descriptionEl
-    ? descriptionEl.value.trim()
-    : "";
 
-  const category = categoryEl
-    ? categoryEl.value
-    : "";
+saveState();
 
-  if (hasIncident && !description) {
-    alert(
-      "Если произошло происшествие, необходимо описать, что произошло."
-    );
-    return;
-  }
 
-  try {
-    const result = await sendPost({
-      action: "check",
+updateScreen();
 
-      employee:
-        currentEmployee.name ||
-        currentEmployee.employeeName ||
-        currentEmployee["ФИО"],
 
-      employeeId:
-        currentEmployee.id ||
-        currentEmployee.employeeId ||
-        currentEmployee["ID"],
+clearForm();
 
-      post:
-        currentPost.name ||
-        currentPost.postName ||
-        currentPost["Название"],
 
-      postId:
-        currentPost.id ||
-        currentPost.postId,
 
-      onPost: true,
+alert(
+"Проверка зарегистрирована"
+);
 
-      hasIncident: Boolean(hasIncident),
 
-      category: category,
 
-      description: description
-    });
+closeModal();
 
-    if (!result.ok) {
-      throw new Error(
-        result.error || "Ошибка сохранения"
-      );
-    }
 
-    lastCheckTime = new Date();
 
-    nextCheckTime = new Date(
-      Date.now() + 2 * 60 * 60 * 1000
-    );
+}
+catch(error){
 
-    saveState();
 
-    updateMainScreen();
+console.error(error);
 
-    alert(
-      hasIncident
-        ? "Отметка сохранена. Происшествие зарегистрировано."
-        : "Отметка сохранена.\n\nВы на посту. Происшествий не было."
-    );
 
-    clearCheckForm();
-    closePost();
-  } catch (error) {
-    console.error(error);
+alert(
+"Ошибка сохранения:\n"+
+error.message
+);
 
-    alert(
-      "Не удалось сохранить отметку.\n\n" +
-      error.message
-    );
-  }
+
 }
 
 
-function clearCheckForm() {
-  const description = $("checkDescription");
-
-  if (description) {
-    description.value = "";
-  }
-
-  const category = $("incidentCategory");
-
-  if (category) {
-    category.selectedIndex = 0;
-  }
-
-  const noIncident = document.querySelector(
-    'input[name="incidentYes"][value="no"]'
-  );
-
-  if (noIncident) {
-    noIncident.checked = true;
-  }
 }
 
 
-/* =========================
-   БЫСТРОЕ ПРОИСШЕСТВИЕ
-========================= */
 
-function openIncident() {
-  const modal = $("incidentModal");
 
-  if (modal) {
-    modal.classList.remove("hidden");
-  }
+/*
+===========================
+  ПРОИСШЕСТВИЕ
+===========================
+*/
+
+
+function openIncident(){
+
+
+show(
+"incidentModal"
+);
+
+
 }
 
 
-function closeIncident() {
-  hide("incidentModal");
+
+function closeIncident(){
+
+
+hide(
+"incidentModal"
+);
+
+
 }
 
 
-async function saveIncident() {
-  if (!currentEmployee) {
-    alert("Сотрудник не выбран.");
-    return;
-  }
 
-  const categoryEl = $("incidentCategory2");
-  const descriptionEl = $("incidentDescription");
 
-  const category = categoryEl
-    ? categoryEl.value
-    : "";
+async function saveIncident(){
 
-  const description = descriptionEl
-    ? descriptionEl.value.trim()
-    : "";
 
-  if (!description) {
-    alert("Опишите, что произошло.");
-    return;
-  }
 
-  try {
-    const result = await sendPost({
-      action: "incident",
+if(!currentEmployee){
 
-      employee:
-        currentEmployee.name ||
-        currentEmployee.employeeName ||
-        currentEmployee["ФИО"],
+alert(
+"Сотрудник не выбран"
+);
 
-      employeeId:
-        currentEmployee.id ||
-        currentEmployee.employeeId ||
-        currentEmployee["ID"],
+return;
 
-      post: currentPost
-        ? (
-            currentPost.name ||
-            currentPost.postName ||
-            currentPost["Название"]
-          )
-        : "",
-
-      postId: currentPost
-        ? (
-            currentPost.id ||
-            currentPost.postId
-          )
-        : "",
-
-      category: category,
-
-      description: description
-    });
-
-    if (!result.ok) {
-      throw new Error(
-        result.error || "Ошибка сохранения"
-      );
-    }
-
-    alert("Происшествие зарегистрировано.");
-
-    if (categoryEl) {
-      categoryEl.selectedIndex = 0;
-    }
-
-    if (descriptionEl) {
-      descriptionEl.value = "";
-    }
-
-    closeIncident();
-  } catch (error) {
-    console.error(error);
-
-    alert(
-      "Не удалось зарегистрировать происшествие.\n\n" +
-      error.message
-    );
-  }
 }
 
 
-/* =========================
-   ОТПРАВКА В GOOGLE SHEETS
-========================= */
 
-async function sendPost(data) {
-  const response = await fetch(API_URL, {
-    method: "POST",
+const description =
+$("incidentDescription")
+?
+$("incidentDescription").value.trim()
+:
+"";
 
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
 
-    body: JSON.stringify(data)
-  });
 
-  const text = await response.text();
+const category =
+$("incidentCategory2")
+?
+$("incidentCategory2").value
+:
+"";
 
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("Ответ сервера:", text);
 
-    throw new Error(
-      "Сервер вернул некорректный ответ."
-    );
-  }
+
+if(!description){
+
+alert(
+"Введите описание"
+);
+
+return;
+
 }
 
 
-/* =========================
-   СОСТОЯНИЕ ПРИЛОЖЕНИЯ
-========================= */
 
-function saveState() {
-  const state = {
-    currentPost: currentPost,
-    currentEmployee: currentEmployee,
-    shiftStarted: shiftStarted,
-    lastCheckTime: lastCheckTime
-      ? lastCheckTime.toISOString()
-      : null,
-    nextCheckTime: nextCheckTime
-      ? nextCheckTime.toISOString()
-      : null
-  };
+try{
 
-  localStorage.setItem(
-    "guardAppState",
-    JSON.stringify(state)
-  );
+
+const result =
+await sendToAPI({
+
+action:
+"incident",
+
+
+employee:
+currentEmployee.name,
+
+
+employeeId:
+currentEmployee.id,
+
+
+post:
+currentPost
+?
+currentPost.name
+:
+"",
+
+
+postId:
+currentPost
+?
+currentPost.id
+:
+"",
+
+
+category:
+category,
+
+
+description:
+description
+
+
+});
+
+
+
+if(
+result.success===false
+){
+
+throw new Error(
+result.message
+);
+
 }
 
 
-function restoreState() {
-  try {
-    const saved =
-      localStorage.getItem("guardAppState");
 
-    if (!saved) return;
+alert(
+"Происшествие отправлено"
+);
 
-    const state = JSON.parse(saved);
 
-    currentPost = state.currentPost || null;
-    currentEmployee = state.currentEmployee || null;
 
-    shiftStarted =
-      Boolean(state.shiftStarted);
+$("incidentDescription").value="";
 
-    lastCheckTime =
-      state.lastCheckTime
-        ? new Date(state.lastCheckTime)
-        : null;
 
-    nextCheckTime =
-      state.nextCheckTime
-        ? new Date(state.nextCheckTime)
-        : null;
 
-    updateEmployee();
-    updateMainScreen();
-  } catch (error) {
-    console.error(
-      "Ошибка восстановления состояния:",
-      error
-    );
-  }
+closeIncident();
+
+
+
+}
+catch(error){
+
+
+alert(
+"Ошибка отправки:\n"+
+error.message
+);
+
+
 }
 
 
-/* =========================
-   ГЛАВНЫЙ ЭКРАН
-========================= */
-
-function updateMainScreen() {
-  if (currentPost) {
-    const name =
-      currentPost.name ||
-      currentPost.postName ||
-      currentPost["Название"] ||
-      "Пост";
-
-    setText("currentPost", name);
-  }
-
-  if (nextCheckTime) {
-    setText(
-      "mainNextCheck",
-      formatDateTime(nextCheckTime)
-    );
-  } else {
-    setText(
-      "mainNextCheck",
-      "После заступления на пост"
-    );
-  }
-
-  updateEmployee();
 }
 
 
-/* =========================
-   ВРЕМЯ
-========================= */
 
-function updateTime() {
-  const now = new Date();
 
-  const text =
-    now.toLocaleDateString("ru-RU") +
-    " " +
-    now.toLocaleTimeString("ru-RU");
 
-  setText("currentTime", text);
+/*
+===========================
+  API
+===========================
+*/
+
+
+async function sendToAPI(data){
+
+
+
+const response =
+await fetch(
+API_URL,
+{
+
+
+method:
+"POST",
+
+
+headers:
+{
+
+"Content-Type":
+"text/plain;charset=utf-8"
+
+},
+
+
+body:
+JSON.stringify(data)
+
+
+}
+);
+
+
+
+const text =
+await response.text();
+
+
+
+try{
+
+
+return JSON.parse(text);
+
+
+}
+catch(e){
+
+
+return {
+
+success:false,
+
+message:text
+
+};
+
+
 }
 
 
-function formatDateTime(date) {
-  if (!date) return "—";
+}
 
-  return date.toLocaleString(
-    "ru-RU",
-    {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }
-  );
+
+
+
+
+/*
+===========================
+  СОСТОЯНИЕ
+===========================
+*/
+
+
+function saveState(){
+
+
+
+localStorage.setItem(
+
+"kontrolPostov",
+
+JSON.stringify({
+
+employee:
+currentEmployee,
+
+
+post:
+currentPost,
+
+
+shift:
+shiftStarted,
+
+
+last:
+lastCheckTime
+?
+lastCheckTime.toISOString()
+:
+null,
+
+
+next:
+nextCheckTime
+?
+nextCheckTime.toISOString()
+:
+null
+
+
+})
+
+);
+
+
+}
+
+
+
+
+function restoreState(){
+
+
+try{
+
+
+const data =
+JSON.parse(
+
+localStorage.getItem(
+"kontrolPostov"
+)
+
+);
+
+
+
+if(!data){
+
+return;
+
+}
+
+
+
+currentEmployee =
+data.employee ||
+null;
+
+
+
+currentPost =
+data.post ||
+null;
+
+
+
+shiftStarted =
+data.shift ||
+false;
+
+
+
+if(data.last){
+
+lastCheckTime=
+new Date(data.last);
+
+}
+
+
+
+if(data.next){
+
+nextCheckTime=
+new Date(data.next);
+
+}
+
+
+
+}
+catch(e){
+
+console.log(e);
+
+}
+
+
+
+}
+
+
+
+
+
+/*
+===========================
+  ЭКРАН
+===========================
+*/
+
+
+function updateScreen(){
+
+
+
+updateEmployee();
+
+
+
+if(currentPost){
+
+
+text(
+"currentPost",
+currentPost.name
+);
+
+
+}
+else{
+
+
+text(
+"currentPost",
+"Пост не выбран"
+);
+
+
+}
+
+
+
+if(nextCheckTime){
+
+
+text(
+
+"mainNextCheck",
+
+"Следующая проверка: "+
+nextCheckTime.toLocaleString(
+"ru-RU"
+)
+
+);
+
+
+}
+else{
+
+
+text(
+
+"mainNextCheck",
+
+"После заступления на пост"
+
+);
+
+
+}
+
+
+
+updateShiftButton();
+
+
+
+}
+
+
+
+
+
+function clearForm(){
+
+
+const desc =
+$("checkDescription");
+
+
+if(desc){
+
+desc.value="";
+
+}
+
+
+
+}
+
+
+
+
+
+function closeModal(){
+
+
+hide(
+"modal"
+);
+
+
+}
+
+
+
+
+
+function updateTime(){
+
+
+text(
+
+"currentTime",
+
+new Date()
+.toLocaleString(
+"ru-RU"
+)
+
+);
+
+
 }
