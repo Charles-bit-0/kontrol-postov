@@ -1,5 +1,5 @@
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbxutkC2ZMlHOlhzelf7BzjPizHduFwUy8jCCrdAWCuQLvxdB4yVxNRVhf0T9ZIU9vYujA/exec";
+"https://script.google.com/macros/s/AKfycbxutkC2ZMlHOlhzelf7BzjPizHduFwUy8jCCrdAWCuQLvxdB4yVxNRVhf0T9ZIU9vYujA/exec";
 
 
 let posts = [];
@@ -9,56 +9,46 @@ let currentPost = null;
 let currentEmployee = null;
 
 let shiftStarted = false;
-let lastCheckTime = null;
 let nextCheckTime = null;
 
 
-/*
-===========================
-  ЗАПУСК ПРИЛОЖЕНИЯ
-===========================
-*/
+
+// ===============================
+// ЗАПУСК
+// ===============================
 
 document.addEventListener(
-  "DOMContentLoaded",
-  async () => {
+"DOMContentLoaded",
+async function(){
 
-    bindButtons();
+  connectButtons();
 
-    restoreState();
+  restoreState();
 
-    updateTime();
+  updateTime();
 
-    setInterval(
-      updateTime,
-      1000
-    );
+  setInterval(updateTime,1000);
 
-    await loadData();
+  await loadData();
 
-    updateScreen();
+  updatePage();
 
-  }
-);
+});
 
 
 
-/*
-===========================
-  УТИЛИТЫ
-===========================
-*/
+// ===============================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ===============================
 
 function $(id){
-
   return document.getElementById(id);
-
 }
 
 
-function text(id,value){
+function setText(id,value){
 
-  const el=$(id);
+  let el=$(id);
 
   if(el){
     el.textContent=value;
@@ -69,7 +59,7 @@ function text(id,value){
 
 function show(id){
 
-  const el=$(id);
+  let el=$(id);
 
   if(el){
     el.classList.remove("hidden");
@@ -80,7 +70,7 @@ function show(id){
 
 function hide(id){
 
-  const el=$(id);
+  let el=$(id);
 
   if(el){
     el.classList.add("hidden");
@@ -90,227 +80,193 @@ function hide(id){
 
 
 
-/*
-===========================
-  КНОПКИ
-===========================
-*/
+// ===============================
+// КНОПКИ
+// ===============================
+
+function connectButtons(){
 
 
-function bindButtons(){
+let scanBtn=$("scanBtn");
 
+if(scanBtn){
 
-  const scan=$("scanBtn");
+scanBtn.onclick=startScanner;
 
-  if(scan){
-
-    scan.onclick=startScanner;
-
-  }
-
-
-  const demo=$("demoBtn");
-
-  if(demo){
-
-    demo.onclick=()=>{
-
-      openPost("P-001");
-
-    };
-
-  }
+}
 
 
 
-  const close=$("closeBtn");
+let demoBtn=$("demoBtn");
 
-  if(close){
+if(demoBtn){
 
-    close.onclick=closeModal;
+demoBtn.onclick=function(){
 
-  }
+openPost("P-001");
 
+};
 
-
-  const shift=$("shiftBtn");
-
-  if(shift){
-
-    shift.onclick=startShift;
-
-  }
+}
 
 
 
-  const save=$("saveBtn");
+let shiftBtn=$("shiftBtn");
 
-  if(save){
+if(shiftBtn){
 
-    save.onclick=saveCheck;
+shiftBtn.onclick=startShift;
 
-  }
-
-
-
-  const incident=$("incidentBtn");
-
-  if(incident){
-
-    incident.onclick=openIncident;
-
-  }
+}
 
 
 
-  const incidentSave=$("incidentSaveBtn");
+let saveBtn=$("saveBtn");
 
-  if(incidentSave){
+if(saveBtn){
 
-    incidentSave.onclick=saveIncident;
+saveBtn.onclick=saveCheck;
 
-  }
+}
 
 
 
-  const incidentClose=$("incidentCloseBtn");
+let closeBtn=$("closeBtn");
 
-  if(incidentClose){
+if(closeBtn){
 
-    incidentClose.onclick=closeIncident;
+closeBtn.onclick=closeModal;
 
-  }
+}
+
+
+
+let incidentBtn=$("incidentBtn");
+
+if(incidentBtn){
+
+incidentBtn.onclick=openIncident;
+
+}
+
+
+
+let incidentSave=$("incidentSaveBtn");
+
+if(incidentSave){
+
+incidentSave.onclick=saveIncident;
+
+}
+
+
+
+let incidentClose=$("incidentCloseBtn");
+
+if(incidentClose){
+
+incidentClose.onclick=closeIncident;
+
+}
 
 
 }
 
 
 
-/*
-===========================
-  ЗАГРУЗКА GOOGLE SHEETS
-===========================
-*/
 
+// ===============================
+// ЗАГРУЗКА ДАННЫХ
+// ===============================
 
 async function loadData(){
+
 
 try{
 
 
-const postsResponse =
+let postsResponse =
 await fetch(
- API_URL+"?action=posts"
+API_URL+"?action=posts"
 );
 
 
-const postsData =
+let postsJson =
 await postsResponse.json();
 
 
 
-/*
- Поддерживаем разные ответы API
-*/
+if(Array.isArray(postsJson)){
 
-
-if(
- Array.isArray(postsData)
-){
-
- posts=postsData;
+posts=postsJson;
 
 }
 
-else if(
- Array.isArray(postsData.posts)
-){
+else if(postsJson.posts){
 
- posts=postsData.posts;
+posts=postsJson.posts;
 
 }
 
-else if(
- Array.isArray(postsData.data)
-){
+else if(postsJson.data){
 
- posts=postsData.data;
+posts=postsJson.data;
 
 }
 
 
 
-const employeesResponse =
+
+let empResponse =
 await fetch(
- API_URL+"?action=employees"
+API_URL+"?action=employees"
 );
 
 
 
-const employeesData =
-await employeesResponse.json();
+let empJson =
+await empResponse.json();
 
 
 
-if(
- Array.isArray(employeesData)
-){
+if(Array.isArray(empJson)){
 
- employees=employeesData;
+employees=empJson;
 
 }
 
-else if(
- Array.isArray(employeesData.employees)
-){
+else if(empJson.employees){
 
- employees=employeesData.employees;
+employees=empJson.employees;
 
 }
 
-else if(
- Array.isArray(employeesData.data)
-){
+else if(empJson.data){
 
- employees=employeesData.data;
+employees=empJson.data;
 
 }
 
 
 
-console.log(
- "Посты:",
- posts
+
+if(employees.length>0){
+
+currentEmployee =
+normalizeEmployee(
+employees[0]
 );
 
-
-console.log(
- "Сотрудники:",
- employees
-);
-
-
-
-/*
- Берём первого сотрудника
-*/
-
-
-if(
- employees.length>0
-){
-
- currentEmployee =
- normalizeEmployee(
-  employees[0]
- );
-
 }
-
 
 
 updateEmployee();
 
+
+setText(
+"apiStatus",
+"Подключено"
+);
 
 
 }
@@ -318,14 +274,13 @@ catch(error){
 
 
 console.error(
- "Ошибка загрузки",
- error
+error
 );
 
 
-text(
- "apiStatus",
- "Ошибка подключения"
+setText(
+"apiStatus",
+"Ошибка подключения"
 );
 
 
@@ -336,12 +291,10 @@ text(
 
 
 
-/*
-===========================
-  СОТРУДНИК
-===========================
-*/
 
+// ===============================
+// СОТРУДНИК
+// ===============================
 
 function normalizeEmployee(e){
 
@@ -358,7 +311,6 @@ e.employeeId ||
 
 name:
 e.name ||
-e.Нame ||
 e.employeeName ||
 e["ФИО"] ||
 e["Имя"] ||
@@ -382,21 +334,21 @@ return;
 }
 
 
-text(
+setText(
 "employeeName",
 currentEmployee.name
 );
 
 
 
-const avatar=$("avatar");
+let avatar=$("avatar");
 
 
 if(avatar){
 
 avatar.textContent =
 currentEmployee.name
-.charAt(0)
+.substring(0,1)
 .toUpperCase();
 
 }
@@ -406,35 +358,9 @@ currentEmployee.name
 
 
 
-/*
-===========================
-  ПОСТЫ
-===========================
-*/
-
-
-function findPost(id){
-
-
-return posts.find(
-p=>{
-
-return String(
-p.id ||
-p.ID ||
-p.postId
-)
-
-===String(id);
-
-
-}
-
-);
-
-
-}
-
+// ===============================
+// ПОСТЫ
+// ===============================
 
 
 function normalizePost(p){
@@ -446,19 +372,49 @@ return {
 id:
 p.id ||
 p.ID ||
-p.postId,
+p.postId ||
+"",
 
 
 name:
 p.name ||
-p.title ||
 p.postName ||
 p["Название"] ||
-("Пост "+p.id)
+"Пост"
 
 
 };
 
+
+}
+
+
+
+function findPost(id){
+
+
+for(let p of posts){
+
+
+let post =
+normalizePost(p);
+
+
+if(
+String(post.id)
+===
+String(id)
+){
+
+return post;
+
+}
+
+
+}
+
+
+return null;
 
 }
 
@@ -467,18 +423,12 @@ p["Название"] ||
 function openPost(id){
 
 
-let post=findPost(id);
+currentPost =
+findPost(id);
 
 
 
-if(post){
-
-currentPost=
-normalizePost(post);
-
-}
-
-else{
+if(!currentPost){
 
 
 currentPost={
@@ -486,8 +436,7 @@ currentPost={
 id:id,
 
 name:"Пост №"+
-String(id)
-.replace(/\D/g,"")
+id.replace("P-","")
 
 };
 
@@ -496,20 +445,19 @@ String(id)
 
 
 
-text(
+setText(
 "postName",
 currentPost.name
 );
 
 
-text(
+setText(
 "postId",
 currentPost.id
 );
 
 
-
-text(
+setText(
 "currentTime",
 new Date()
 .toLocaleString("ru-RU")
@@ -520,124 +468,28 @@ new Date()
 show("modal");
 
 
-
 updateShiftButton();
 
 
 }
-/*
-/*
-===========================
-  QR СКАНЕР
-===========================
-*/
+// ===============================
+// QR СКАНЕР
+// ===============================
+
 
 let scanner = null;
 
 
 async function startScanner(){
 
-  const reader = $("reader");
 
-  if(!reader){
-
-    alert("Сканер не найден");
-
-    return;
-
-  }
+let reader=$("reader");
 
 
-  show("reader");
-
-
-  try{
-
-
-    scanner =
-      new Html5Qrcode("reader");
-
-
-    await scanner.start(
-
-      {
-        facingMode:"environment"
-      },
-
-
-      {
-        fps:10,
-
-        qrbox:{
-          width:250,
-          height:250
-        }
-
-      },
-
-
-      (decodedText)=>{
-
-        let id = null;
-
-
-        const match =
-          decodedText.match(/P-\d{3}/i);
-
-
-        if(match){
-
-          id =
-          match[0].toUpperCase();
-
-        }
-
-
-        if(id){
-
-          scanner.stop()
-          .catch(()=>{});
-
-
-          hide("reader");
-
-
-          openPost(id);
-
-        }
-
-      }
-
-
-    );
-
-
-  }
-  catch(error){
-
-    console.error(error);
-
-
-    alert(
-      "Не удалось открыть камеру"
-    );
-
-  }
-
-}
-===========================
-  ЗАСТУПЛЕНИЕ НА ПОСТ
-===========================
-/*
-
-
-async function startShift(){
-
-
-if(!currentPost){
+if(!reader){
 
 alert(
-"Сначала выберите пост"
+"Сканер не найден"
 );
 
 return;
@@ -645,95 +497,83 @@ return;
 }
 
 
-
-if(!currentEmployee){
-
-alert(
-"Сотрудник не выбран"
-);
-
-return;
-
-}
+show("reader");
 
 
 
 try{
 
 
-const result =
-await sendToAPI({
-
-action:
-"start_shift",
-
-
-employee:
-currentEmployee.name,
-
-
-employeeId:
-currentEmployee.id,
-
-
-post:
-currentPost.name,
-
-
-postId:
-currentPost.id
-
-
-});
-
-
-
-if(
-result.success===false
-){
-
-throw new Error(
-result.message ||
-"Ошибка сервера"
+scanner =
+new Html5Qrcode(
+"reader"
 );
+
+
+
+await scanner.start(
+
+{
+facingMode:"environment"
+},
+
+
+{
+fps:10,
+
+qrbox:{
+width:250,
+height:250
+}
+
+},
+
+
+function(decodedText){
+
+
+let id=null;
+
+
+
+let match =
+decodedText.match(
+/P-\d{3}/i
+);
+
+
+
+if(match){
+
+id=
+match[0]
+.toUpperCase();
 
 }
 
 
 
-shiftStarted=true;
+if(id){
 
 
-lastCheckTime=
-new Date();
+scanner.stop()
+.catch(()=>{});
 
 
 
-nextCheckTime=
-new Date(
-Date.now()
-+
-2*60*60*1000
+hide("reader");
+
+
+openPost(id);
+
+
+}
+
+
+}
+
+
 );
-
-
-
-saveState();
-
-
-updateShiftButton();
-
-
-updateScreen();
-
-
-
-alert(
-"Вы заступили на пост\n\n"+
-currentPost.name+
-"\n\nСледующая отметка через 2 часа"
-);
-
 
 
 }
@@ -744,72 +584,24 @@ console.error(error);
 
 
 alert(
-"Ошибка заступления:\n"+
-error.message
+"Не удалось открыть камеру"
 );
 
 
 }
 
 
-
 }
 
 
 
 
-
-function updateShiftButton(){
-
-
-const btn=$("shiftBtn");
+// ===============================
+// ЗАСТУПЛЕНИЕ НА ПОСТ
+// ===============================
 
 
-if(!btn){
-
-return;
-
-}
-
-
-
-if(shiftStarted){
-
-
-btn.textContent=
-"Пост уже принят";
-
-
-btn.disabled=true;
-
-
-}
-else{
-
-
-btn.textContent=
-"Заступить на пост";
-
-
-btn.disabled=false;
-
-
-}
-
-
-
-}
-
-
-
-/*
-===========================
-  ПРОВЕРКА КАЖДЫЕ 2 ЧАСА
-===========================
-*/
-
-
-async function saveCheck(){
+async function startShift(){
 
 
 
@@ -837,20 +629,197 @@ return;
 
 
 
-const incident =
+
+try{
+
+
+let result =
+await sendAPI({
+
+action:
+"start_shift",
+
+
+employee:
+currentEmployee.name,
+
+
+employeeId:
+currentEmployee.id,
+
+
+post:
+currentPost.name,
+
+
+postId:
+currentPost.id
+
+
+});
+
+
+
+if(result.success===false){
+
+throw new Error(
+result.message ||
+"Ошибка сервера"
+);
+
+}
+
+
+
+shiftStarted=true;
+
+
+
+nextCheckTime =
+new Date(
+Date.now()
++
+2*60*60*1000
+);
+
+
+
+saveState();
+
+
+
+updateShiftButton();
+
+
+updatePage();
+
+
+
+alert(
+
+"Вы заступили на пост\n\n"+
+currentPost.name+
+"\n\nСледующая отметка через 2 часа"
+
+);
+
+
+
+}
+catch(error){
+
+
+console.error(error);
+
+
+alert(
+"Ошибка заступления:\n"+
+error.message
+);
+
+
+}
+
+
+}
+
+
+
+
+
+function updateShiftButton(){
+
+
+let btn=$("shiftBtn");
+
+
+if(!btn){
+
+return;
+
+}
+
+
+
+if(shiftStarted){
+
+
+btn.textContent =
+"Пост принят";
+
+
+btn.disabled=true;
+
+
+}
+
+else{
+
+
+btn.textContent =
+"Заступить на пост";
+
+
+btn.disabled=false;
+
+
+}
+
+
+
+}
+
+
+
+
+
+// ===============================
+// ДВУХЧАСОВАЯ ПРОВЕРКА
+// ===============================
+
+
+async function saveCheck(){
+
+
+
+if(!currentPost){
+
+alert(
+"Выберите пост"
+);
+
+return;
+
+}
+
+
+
+if(!currentEmployee){
+
+alert(
+"Сотрудник не выбран"
+);
+
+return;
+
+}
+
+
+
+let incident =
 document.querySelector(
 'input[name="incidentYes"]:checked'
 );
 
 
 
-const hasIncident =
+let hasIncident =
 incident &&
 incident.value==="yes";
 
 
 
-const description =
+let description =
 $("checkDescription")
 ?
 $("checkDescription").value.trim()
@@ -859,7 +828,7 @@ $("checkDescription").value.trim()
 
 
 
-const category =
+let category =
 $("incidentCategory")
 ?
 $("incidentCategory").value
@@ -870,7 +839,8 @@ $("incidentCategory").value
 
 if(
 hasIncident &&
-!description
+description===""
+
 ){
 
 alert(
@@ -886,9 +856,8 @@ return;
 try{
 
 
-const result =
-await sendToAPI({
-
+let result =
+await sendAPI({
 
 action:
 "check",
@@ -914,7 +883,7 @@ onPost:true,
 
 
 hasIncident:
-hasIncident,
+Boolean(hasIncident),
 
 
 category:
@@ -929,9 +898,7 @@ description
 
 
 
-if(
-result.success===false
-){
+if(result.success===false){
 
 throw new Error(
 result.message
@@ -941,12 +908,7 @@ result.message
 
 
 
-lastCheckTime=
-new Date();
-
-
-
-nextCheckTime=
+nextCheckTime =
 new Date(
 Date.now()
 +
@@ -958,7 +920,8 @@ Date.now()
 saveState();
 
 
-updateScreen();
+updatePage();
+
 
 
 clearForm();
@@ -966,7 +929,7 @@ clearForm();
 
 
 alert(
-"Проверка зарегистрирована"
+"Отметка сохранена"
 );
 
 
@@ -996,11 +959,28 @@ error.message
 
 
 
-/*
-===========================
-  ПРОИСШЕСТВИЕ
-===========================
-*/
+
+function clearForm(){
+
+
+let d=$("checkDescription");
+
+
+if(d){
+
+d.value="";
+
+}
+
+
+}
+
+
+
+
+// ===============================
+// ПРОИСШЕСТВИЕ
+// ===============================
 
 
 function openIncident(){
@@ -1028,6 +1008,7 @@ hide(
 
 
 
+
 async function saveIncident(){
 
 
@@ -1044,7 +1025,7 @@ return;
 
 
 
-const description =
+let description =
 $("incidentDescription")
 ?
 $("incidentDescription").value.trim()
@@ -1053,7 +1034,7 @@ $("incidentDescription").value.trim()
 
 
 
-const category =
+let category =
 $("incidentCategory2")
 ?
 $("incidentCategory2").value
@@ -1062,13 +1043,16 @@ $("incidentCategory2").value
 
 
 
-if(!description){
+if(description===""){
+
 
 alert(
 "Введите описание"
 );
 
+
 return;
+
 
 }
 
@@ -1077,8 +1061,8 @@ return;
 try{
 
 
-const result =
-await sendToAPI({
+let result =
+await sendAPI({
 
 action:
 "incident",
@@ -1120,9 +1104,7 @@ description
 
 
 
-if(
-result.success===false
-){
+if(result.success===false){
 
 throw new Error(
 result.message
@@ -1160,70 +1142,65 @@ error.message
 
 
 }
+// ===============================
+// ОТПРАВКА В GOOGLE APPS SCRIPT
+// ===============================
 
 
+async function sendAPI(data){
 
 
-
-/*
-===========================
-  API
-===========================
-*/
-
-
-async function sendToAPI(data){
-
-
-
-const response =
+let response =
 await fetch(
+
 API_URL,
+
 {
 
+method:"POST",
 
-method:
-"POST",
-
-
-headers:
-{
+headers:{
 
 "Content-Type":
 "text/plain;charset=utf-8"
 
 },
 
-
 body:
 JSON.stringify(data)
 
-
 }
+
 );
 
 
 
-const text =
+let text =
 await response.text();
 
 
 
 try{
 
-
 return JSON.parse(text);
 
-
 }
+
 catch(e){
+
+
+console.error(
+"Ответ сервера:",
+text
+);
 
 
 return {
 
 success:false,
 
-message:text
+message:
+"Неверный ответ сервера"
 
 };
 
@@ -1231,26 +1208,23 @@ message:text
 }
 
 
+
 }
 
 
 
 
-
-/*
-===========================
-  СОСТОЯНИЕ
-===========================
-*/
+// ===============================
+// СОХРАНЕНИЕ СОСТОЯНИЯ
+// ===============================
 
 
 function saveState(){
 
 
-
 localStorage.setItem(
 
-"kontrolPostov",
+"guard_state",
 
 JSON.stringify({
 
@@ -1264,14 +1238,6 @@ currentPost,
 
 shift:
 shiftStarted,
-
-
-last:
-lastCheckTime
-?
-lastCheckTime.toISOString()
-:
-null,
 
 
 next:
@@ -1292,17 +1258,18 @@ null
 
 
 
+
 function restoreState(){
 
 
 try{
 
 
-const data =
+let data =
 JSON.parse(
 
 localStorage.getItem(
-"kontrolPostov"
+"guard_state"
 )
 
 );
@@ -1335,48 +1302,37 @@ false;
 
 
 
-if(data.last){
-
-lastCheckTime=
-new Date(data.last);
-
-}
-
-
-
 if(data.next){
 
-nextCheckTime=
-new Date(data.next);
+nextCheckTime =
+new Date(
+data.next
+);
 
 }
 
 
 
 }
-catch(e){
+catch(error){
 
-console.log(e);
+console.error(error);
+
+}
+
 
 }
 
 
 
-}
 
 
+// ===============================
+// ОБНОВЛЕНИЕ СТРАНИЦЫ
+// ===============================
 
 
-
-/*
-===========================
-  ЭКРАН
-===========================
-*/
-
-
-function updateScreen(){
-
+function updatePage(){
 
 
 updateEmployee();
@@ -1386,30 +1342,38 @@ updateEmployee();
 if(currentPost){
 
 
-text(
+setText(
+
 "currentPost",
+
 currentPost.name
+
 );
 
 
 }
+
 else{
 
 
-text(
+setText(
+
 "currentPost",
+
 "Пост не выбран"
+
 );
 
 
 }
+
 
 
 
 if(nextCheckTime){
 
 
-text(
+setText(
 
 "mainNextCheck",
 
@@ -1422,10 +1386,11 @@ nextCheckTime.toLocaleString(
 
 
 }
+
 else{
 
 
-text(
+setText(
 
 "mainNextCheck",
 
@@ -1441,32 +1406,14 @@ text(
 updateShiftButton();
 
 
-
 }
 
 
 
 
-
-function clearForm(){
-
-
-const desc =
-$("checkDescription");
-
-
-if(desc){
-
-desc.value="";
-
-}
-
-
-
-}
-
-
-
+// ===============================
+// ЗАКРЫТИЕ ОКОН
+// ===============================
 
 
 function closeModal(){
@@ -1481,12 +1428,29 @@ hide(
 
 
 
+function closeIncident(){
+
+
+hide(
+"incidentModal"
+);
+
+
+}
+
+
+
+
+
+// ===============================
+// ВРЕМЯ
+// ===============================
 
 
 function updateTime(){
 
 
-text(
+setText(
 
 "currentTime",
 
